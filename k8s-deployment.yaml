@@ -1,0 +1,80 @@
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    app: customer-service-bq5o5jed
+  name: customer-service-bq5o5jed
+  namespace: 
+spec:
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: customer-service-bq5o5jed
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pvc-customer-service-bq5o5jed
+  annotations:
+    volume.beta.kubernetes.io/storage-class: ''
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: customer-service-bq5o5jed
+  namespace: 
+spec:
+  selector:
+    matchLabels:
+      app: customer-service-bq5o5jed
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: customer-service-bq5o5jed
+      annotations:
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: '8080'
+        prometheus.io/scheme: http
+        prometheus.io/scrape: 'true'
+    spec:
+      containers:
+        - name: customer-service-bq5o5jed-container
+          image: //customer-service-bq5o5jed:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: pv-customer-service-bq5o5jed-log
+              mountPath: /logs
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: default
+            - name: SERVICE_PROTOCOL
+              value: http
+            - name: SERVICE_HOST
+              value: localhost
+            - name: SERVICE_PATH
+              value: 
+      volumes:
+        - name:  pv-customer-service-bq5o5jed-log
+          persistentVolumeClaim:
+            claimName: pvc-customer-service-bq5o5jed
+      imagePullSecrets:
+        - name: regcred
